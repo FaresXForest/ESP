@@ -1,0 +1,186 @@
+-- إعداد واجهة المستخدم (UI)
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButtonESPStrong = Instance.new("TextButton")
+local ToggleButtonESPSimple = Instance.new("TextButton")
+
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- زر ESP قوي
+ToggleButtonESPStrong.Size = UDim2.new(0, 100, 0, 50)
+ToggleButtonESPStrong.Position = UDim2.new(0.1, 0, 0.9, -25)
+ToggleButtonESPStrong.Text = "ESP قوي"
+ToggleButtonESPStrong.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- لون أحمر يعني مغلق
+ToggleButtonESPStrong.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButtonESPStrong.Parent = ScreenGui
+
+-- زر ESP بسيط
+ToggleButtonESPSimple.Size = UDim2.new(0, 100, 0, 50)
+ToggleButtonESPSimple.Position = UDim2.new(0.3, 0, 0.9, -25)
+ToggleButtonESPSimple.Text = "ESP بسيط"
+ToggleButtonESPSimple.BackgroundColor3 = Color3.fromRGB(255, 255, 0) -- لون أصفر يعني مغلق
+ToggleButtonESPSimple.TextColor3 = Color3.fromRGB(0, 0, 0)
+ToggleButtonESPSimple.Parent = ScreenGui
+
+-- إعداد خاصية ESP
+local ESP = {}
+local espStrongEnabled = false
+local espSimpleEnabled = false
+
+local strongHighlights = {}
+local simpleLabels = {}
+
+-- دالة ESP القوي
+function ESP:toggleStrongESP()
+    espStrongEnabled = not espStrongEnabled
+    if espStrongEnabled then
+        ToggleButtonESPStrong.Text = "إيقاف ESP قوي"
+        ToggleButtonESPStrong.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- لون أخضر يعني يعمل
+        for _, player in pairs(game.Players:GetPlayers()) do
+            self:addStrongBox(player)
+        end
+    else
+        ToggleButtonESPStrong.Text = "ESP قوي"
+        ToggleButtonESPStrong.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- لون أحمر يعني مغلق
+        for _, player in pairs(game.Players:GetPlayers()) do
+            self:removeStrongBox(player)
+        end
+    end
+end
+
+-- دالة ESP البسيط
+function ESP:toggleSimpleESP()
+    espSimpleEnabled = not espSimpleEnabled
+    if espSimpleEnabled then
+        ToggleButtonESPSimple.Text = "إيقاف ESP بسيط"
+        ToggleButtonESPSimple.BackgroundColor3 = Color3.fromRGB(0, 0, 255) -- لون أزرق يعني يعمل
+        for _, player in pairs(game.Players:GetPlayers()) do
+            self:addSimpleLabel(player)
+        end
+    else
+        ToggleButtonESPSimple.Text = "ESP بسيط"
+        ToggleButtonESPSimple.BackgroundColor3 = Color3.fromRGB(255, 255, 0) -- لون أصفر يعني مغلق
+        for _, player in pairs(game.Players:GetPlayers()) do
+            self:removeSimpleLabel(player)
+        end
+    end
+end
+
+function ESP:addStrongBox(player)
+    if not player.Character then return end
+    local highlight = Instance.new("Highlight")
+    highlight.Parent = player.Character
+    highlight.FillColor = Color3.new(0, 1, 0) -- لون الإطار للـESP القوي
+    highlight.FillTransparency = 0.75
+    highlight.OutlineTransparency = 0
+    strongHighlights[player.UserId] = highlight -- حفظ الـ highlight في جدول
+end
+
+function ESP:removeStrongBox(player)
+    if strongHighlights[player.UserId] then
+        strongHighlights[player.UserId]:Destroy()
+        strongHighlights[player.UserId] = nil
+    end
+end
+
+function ESP:addSimpleLabel(player)
+    if not player.Character then return end
+    local label = Instance.new("BillboardGui")
+    label.Adornee = player.Character.Head
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.AlwaysOnTop = true
+    local textLabel = Instance.new("TextLabel", label)
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.Text = "في لاعب احترس"
+    textLabel.TextColor3 = Color3.new(1, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    label.Parent = player.Character.Head
+    simpleLabels[player.UserId] = label -- حفظ الـ label في جدول
+end
+
+function ESP:removeSimpleLabel(player)
+    if simpleLabels[player.UserId] then
+        simpleLabels[player.UserId]:Destroy()
+        simpleLabels[player.UserId] = nil
+    end
+end
+
+-- تشغيل وإيقاف ESP القوي عند الضغط على الزر
+ToggleButtonESPStrong.MouseButton1Click:Connect(function()
+    ESP:toggleStrongESP()
+end)
+
+-- تشغيل وإيقاف ESP البسيط عند الضغط على الزر
+ToggleButtonESPSimple.MouseButton1Click:Connect(function()
+    ESP:toggleSimpleESP()
+end)
+
+-- دعم تحريك الأزرار في الجوال
+local function makeButtonDraggable(button)
+    local dragging = false
+    local dragInput
+    local startPos
+
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            startPos = input.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch and dragging then
+            local delta = input.Position - startPos
+            button.Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset + delta.X, button.Position.Y.Scale, button.Position.Y.Offset + delta.Y)
+            startPos = input.Position -- تحديث موضع البداية
+        end
+    end)
+
+    -- إضافة ميزة لإيقاف الزر عند إيقافه
+    button.MouseButton1Up:Connect(function()
+        dragging = false -- إيقاف السحب عند تحرير الزر
+    end)
+end
+
+makeButtonDraggable(ToggleButtonESPStrong)
+makeButtonDraggable(ToggleButtonESPSimple)
+
+-- تفعيل ESP عند دخول لاعبين جدد
+game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if espStrongEnabled then
+            ESP:addStrongBox(player)
+        end
+        if espSimpleEnabled then
+            ESP:addSimpleLabel(player)
+        end
+    end)
+end)
+
+-- تحسينات باستخدام الذكاء الاصطناعي
+function detectAndFixIssues()
+    -- إضافة خوارزمية للكشف عن الأخطاء وإصلاحها
+    if not espStrongEnabled and #strongHighlights > 0 then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            ESP:removeStrongBox(player)
+        end
+    end
+
+    if not espSimpleEnabled and #simpleLabels > 0 then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            ESP:removeSimpleLabel(player)
+        end
+    end
+end
+
+-- تحديث مستمر كل 1 ثانية
+while true do
+    wait(1)
+    detectAndFixIssues()
+end
